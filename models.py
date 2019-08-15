@@ -22,6 +22,9 @@ from django.db import models
 from django.template.defaultfilters import slugify
 from django.utils.encoding import python_2_unicode_compatible
 
+# taggit tagging APIs
+from taggit.managers import TaggableManager
+
 # context imports
 from context.models import Abstract_Type
 from context.shared.models import Abstract_Context_With_JSON
@@ -348,17 +351,31 @@ class Proquest_HNP_Newspaper_Archive( models.Model ):
 
         if ( self.archive_identifier ):
         
-            string_OUT += prefix_string + str( self.paper_identifier )
+            string_OUT += "{}{}".format( prefix_string, self.archive_identifier )
             prefix_string = " - "
             
-        #-- END check to see if newspaper. --#
+        #-- END check to see if archive_identifier. --#
             
         if ( self.proquest_hnp_newspaper ):
         
-            string_OUT += prefix_string + self.proquest_hnp_newspaper.paper_identifier
+            string_OUT += "{}{}".format( prefix_string, self.proquest_hnp_newspaper.paper_identifier )
             prefix_string = " - "
             
         #-- END check to see if newspaper. --#
+            
+        if ( self.start_date ):
+        
+            string_OUT += "{} from {}".format( prefix_string, self.start_date )
+            prefix_string = " - "
+            
+        #-- END check to see if start_date. --#
+            
+        if ( self.end_date ):
+        
+            string_OUT += "{} to {}".format( prefix_string, self.end_date )
+            prefix_string = " - "
+            
+        #-- END check to see if end_date. --#
             
         return string_OUT
         
@@ -399,14 +416,14 @@ class PHNP_Newspaper_Object_Type( models.Model ):
 
         if ( self.proquest_hnp_newspaper ):
         
-            string_OUT += prefix_string + self.proquest_hnp_newspaper.name
+            string_OUT += "{}{}".format( prefix_string, self.proquest_hnp_newspaper.paper_identifier )
             prefix_string = " - "
             
         #-- END check to see if proquest_hnp_newspaper. --#
             
         if ( self.proquest_hnp_object_type ):
         
-            string_OUT += prefix_string + str( self.proquest_hnp_object_type )
+            string_OUT += "{}{}".format( prefix_string, self.proquest_hnp_object_type )
             prefix_string = " - "
             
         #-- END check to see if object type. --#
@@ -448,16 +465,23 @@ class PHNP_Newspaper_Archive_Object_Type( models.Model ):
 
         #-- END check to see if ID --#
 
-        if ( self.proquest_hnp_newspaper ):
+        if ( self.proquest_hnp_newspaper_archive ):
         
-            string_OUT += prefix_string + self.proquest_hnp_newspaper.name
+            string_OUT += "{}{}".format( prefix_string, self.proquest_hnp_newspaper_archive.archive_identifier )
             prefix_string = " - "
             
         #-- END check to see if proquest_hnp_newspaper. --#
             
         if ( self.proquest_hnp_object_type ):
         
-            string_OUT += prefix_string + str( self.proquest_hnp_object_type )
+            string_OUT += "{}{}".format( prefix_string, self.proquest_hnp_object_type )
+            prefix_string = " - "
+            
+        #-- END check to see if object type. --#
+            
+        if ( self.item_count ):
+        
+            string_OUT += "{}{}".format( prefix_string, self.item_count )
             prefix_string = " - "
             
         #-- END check to see if object type. --#

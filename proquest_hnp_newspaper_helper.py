@@ -31,6 +31,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 
 # python_utilities
+from python_utilities.exceptions.exception_helper import ExceptionHelper
 from python_utilities.parameters.param_container import ParamContainer
 from python_utilities.rate_limited.basic_rate_limited import BasicRateLimited
 
@@ -38,7 +39,11 @@ from python_utilities.rate_limited.basic_rate_limited import BasicRateLimited
 from context_text.shared.context_text_base import ContextTextBase
 
 # context_text_proquest_hnp
+from context_text_proquest_hnp.models import PHNP_Newspaper_Archive_Object_Type
+from context_text_proquest_hnp.models import PHNP_Newspaper_Object_Type
 from context_text_proquest_hnp.models import Proquest_HNP_Newspaper
+from context_text_proquest_hnp.models import Proquest_HNP_Newspaper_Archive
+from context_text_proquest_hnp.models import Proquest_HNP_Object_Type
 
 #===============================================================================
 # classes (in alphabetical order by name)
@@ -61,11 +66,186 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
     ARCHIVE_SUMMARY_MIN_PUB_DATE = "min_pub_date"
     ARCHIVE_SUMMARY_MAX_PUB_DATE = "max_pub_date"
     ARCHIVE_SUMMARY_INSTANCE = "archive_instance"
+    
+    # datetime string formats
+    DATETIME_FORMAT_NUMERAL_PUB_DATE = "%Y%m%d"
+
+    # logger name
+    MY_LOGGER_NAME = "context_text_proquest_hnp.proquest_hnp_newspaper_helper"
 
 
-    #-----------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
+    # ! ==> class variables
+    #---------------------------------------------------------------------------
+
+
+    # object type instances, to minimize trips to database.
+    raw_object_type_to_instance_map = {}
+
+    
+    #---------------------------------------------------------------------------
     # ! ==> class methods
-    #-----------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
+
+
+    @classmethod
+    def fetch_object_type_instance( cls, raw_value_IN ):
+        
+        # return reference
+        instance_OUT = None
+
+        # declare variables
+        me = "fetch_object_type_instance"
+        log_message = None
+        type_instance = None
+        
+        # make sure value is passed in.
+        if ( ( raw_value_IN is not None ) and ( raw_value_IN != "" ) ):
+        
+            # is value already in our map?
+            if ( raw_value_IN in cls.raw_object_type_to_instance_map ):
+            
+                # it is.  Return what we have.
+                type_instance = cls.raw_object_type_to_instance_map.get( raw_value_IN, None )
+                
+            else:
+            
+                # not in cache.  In database?
+                try:
+                
+                    # look to see if type with this raw value exists.
+                    type_instance = Proquest_HNP_Object_Type.objects.get( raw_value = raw_value_IN )
+                    
+                except Proquest_HNP_Object_Type.DoesNotExist as dnee:
+                
+                    # does not exist.  make one and return it.
+                    type_instance = Proquest_HNP_Object_Type()
+                    type_instance.set_raw_value( raw_value_IN )
+                    type_instance.save()
+                
+                except Proquest_HNP_Object_Type.MultipleObjectsReturned as more:
+                
+                    # ERROR - more than one.  Should be impossible.  Check
+                    #     case-sensitivity things.
+                    log_message = "ERROR - multiple matches for raw value \"{}\".  This should be impossible.  Check for case-insensitivity."
+                    cls.log_message( log_message,
+                                     method_IN = me,
+                                     logger_name_IN = cls.MY_LOGGER_NAME,
+                                     do_print_IN = True )
+                    type_instance = None
+                
+                except Exception as e:
+                
+                    # Unexpected ERROR.
+                    log_message = "ERROR - multiple matches for raw value \"{}\".  This should be impossible.  Check for case-insensitivity."
+                    cls.log_exception( e,
+                                       message_IN = log_message,
+                                       method_IN = me,
+                                       logger_name_IN = cls.MY_LOGGER_NAME,
+                                       do_print_IN = True )
+                    type_instance = None
+                
+                #-- END try-except --#
+                
+                # got anything?
+                if ( type_instance is not None ):
+                
+                    # yes.  Add to map.
+                    cls.raw_object_type_to_instance_map[ raw_value_IN ] = type_instance
+                    type_instance = cls.fetch_object_type_instance( raw_value_IN )
+                
+                #-- END check to see if we have an instance --#
+                 
+            #-- END check to see if instance already loaded --#
+            
+        #-- END check to make sure value passed in. --#
+        
+        instance_OUT = type_instance
+        return instance_OUT
+        
+    #-- END class method fetch_object_type_instance() --#
+    
+
+    @classmethod
+    def fetch_archive_instance( cls,
+                                proquest_hnp_newspaper_instance_IN,
+                                archive_identifier_IN,
+                                compressed_file_path_IN = None,
+                                uncompressed_folder_path_IN = None,
+                                start_date_IN = None,
+                                end_date_IN = None,
+                                notes_IN = None ):
+        
+        # return reference
+        instance_OUT = None
+
+        # declare variables
+        me = "fetch_archive_instance"
+        log_message = None
+        archive_qs = None
+        archive_instance = None
+        
+        # make sure newspaper passed in...
+        if ( proquest_hnp_newspaper_instance_IN is not None ):
+        
+            # ...and identifier passed in.
+            if ( ( archive_identifier_IN is not None ) and ( archive_identifier_IN != "" ) ):
+
+                # build query set
+                archive_qs = Proquest_HNP_Newspaper_Archive.objects.filter( proquest_hnp_newspaper = proquest_hnp_newspaper_instance_IN )
+                archive_qs = archive_qs.filter( archive_identifier = archive_identifier_IN )
+
+                # In database?
+                try:
+                
+                    # look to see if type with this raw value exists.
+                    archive_instance = archive_qs.get()
+                    
+                except Proquest_HNP_Newspaper_Archive.DoesNotExist as dnee:
+                
+                    # does not exist.  make one and return it.
+                    archive_instance = Proquest_HNP_Newspaper_Archive()
+                    archive_instance.proquest_hnp_newspaper = proquest_hnp_newspaper_instance_IN
+                    archive_instance.archive_identifier = archive_identifier_IN
+                    archive_instance.compressed_file_path = compressed_file_path_IN
+                    archive_instance.uncompressed_folder_path = uncompressed_folder_path_IN
+                    archive_instance.start_date = start_date_IN
+                    archive_instance.end_date = end_date_IN
+                    archive_instance.notes = notes_IN
+                    archive_instance.save()
+                
+                except Proquest_HNP_Newspaper_Archive.MultipleObjectsReturned as more:
+                
+                    # ERROR - more than one.  Should be impossible.  Check
+                    #     case-sensitivity things.
+                    log_message = "ERROR - multiple matches for archive_identifier = \"{}\".  This should be impossible.  Check for case-insensitivity.".format( archive_identifier )
+                    cls.log_message( log_message,
+                                     method_IN = me,
+                                     logger_name_IN = cls.MY_LOGGER_NAME,
+                                     do_print_IN = True )
+                    archive_instance = None
+                
+                except Exception as e:
+                
+                    # Unexpected ERROR.
+                    log_message = "ERROR - Unexpected exception caught loading Proquest_HNP_Newspaper_Archive with archive_identifier = \"{}\"".format( archive_identifier )
+                    cls.log_exception( e,
+                                       message_IN = log_message,
+                                       method_IN = me,
+                                       logger_name_IN = cls.MY_LOGGER_NAME,
+                                       do_print_IN = True )
+                    archive_instance = None
+                
+                #-- END try-except --#
+                
+            #-- END check to make sure archive_identifier passed in. --#
+            
+        #-- END check to make sure newspaper instance passed in. --#
+        
+        instance_OUT = archive_instance
+        return instance_OUT
+        
+    #-- END class method fetch_archive_instance() --#
 
 
     #---------------------------------------------------------------------------
@@ -106,10 +286,58 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         # define parameters - should do this in "child.__init__()".
         self.define_parameters( self.PARAM_NAME_TO_TYPE_MAP )        
         
-        # set logger name (for LoggingHelper parent class: (LoggingHelper --> BasicRateLimited --> ContextTextBase).
-        self.set_logger_name( "context_text_proquest_hnp.proquest_hnp_newspaper" )
+        # set logger name (for LoggingHelper parent class: (LoggingHelper --> ExceptionHelper --> BasicRateLimited --> ContextBase --> ContextTextBase).
+        self.set_logger_name( self.MY_LOGGER_NAME )
         
     #-- END method __init__() --#
+
+
+    def __str__( self ):
+
+        # return reference
+        value_OUT = ""
+        
+        # declare variables
+        separator = ""
+        
+        if ( self.paper_identifier is not None ):
+        
+            value_OUT = "{}{}{}".format( value_OUT, separator, self.paper_identifier )
+            separator = " - "
+            
+        #-- END check if ID present --#
+        
+        if ( self.paper_start_year is not None ):
+        
+            value_OUT = "{} from {}".format( value_OUT, self.paper_start_year )
+            separator = " - "
+            
+        #-- END check if start year present --#
+
+        if ( self.paper_end_year is not None ):
+        
+            value_OUT = "{} to {}".format( value_OUT, self.paper_end_year )
+            separator = " - "
+            
+        #-- END check if end year present --#
+            
+        if ( self.source_paper_path is not None ):
+        
+            value_OUT = "{}{}source path: {}".format( value_OUT, separator, self.source_paper_path )
+            separator = " - "
+            
+        #-- END check if source path present --#
+            
+        if ( self.destination_paper_path is not None ):
+        
+            value_OUT = "{}{}dest path: {}".format( value_OUT, separator, self.destination_paper_path )
+            separator = " - "
+            
+        #-- END check if dest path present --#
+        
+        return value_OUT
+            
+    #-- END method __str__() --#
 
 
     #---------------------------------------------------------------------------
@@ -182,10 +410,75 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         self.phnp_newspaper = phnp_newspaper_instance
         
         # return
-        instance_OUT = phnp_newspaper_instance
+        instance_OUT = self.phnp_newspaper
         return instance_OUT
         
     #-- END method create_PHNP_newspaper() --#
+    
+
+    def get_archive_instance( self,
+                              archive_identifier_IN,
+                              compressed_file_path_IN = None,
+                              uncompressed_folder_path_IN = None,
+                              start_date_IN = None,
+                              end_date_IN = None,
+                              notes_IN = None ):
+        
+        # return reference
+        instance_OUT = None
+
+        # declare variables
+        me = "get_archive_instance"
+        newspaper_instance = None
+        archive_instance = None
+
+        # get nested newspaper instance
+        newspaper_instance = self.phnp_newspaper
+        
+        # call static method
+        archive_instance = self.fetch_archive_instance( newspaper_instance,
+                                                        archive_identifier_IN,
+                                                        compressed_file_path_IN,
+                                                        uncompressed_folder_path_IN,
+                                                        start_date_IN,
+                                                        end_date_IN,
+                                                        notes_IN )
+        
+        instance_OUT = archive_instance
+        return instance_OUT
+        
+    #-- END class method get_archive_instance() --#
+
+
+    def get_PHNP_newspaper( self ):
+        
+        '''
+        Instance must have paper_identifier set.  If set, start and end year and
+            source and destination paths will also be stored.
+        '''
+        
+        # return reference
+        instance_OUT = None
+        
+        # declare variables
+        me = "get_PHNP_newspaper"
+        
+        # if instance set, just return it.
+        if ( self.phnp_newspaper is not None ):
+        
+            # already set.  Use it.
+            instance_OUT = self.phnp_newspaper
+            
+        else:
+        
+            # not already set.  Create, then return.        
+            instance_OUT = self.create_PHNP_newspaper()
+            
+        #-- END check if instance already nested. --#
+
+        return instance_OUT
+        
+    #-- END method get_PHNP_newspaper() --#
     
 
     def initialize_from_database( self, paper_identifier_IN ):
@@ -466,7 +759,7 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         archive_summary_dict = None
         
         # summarize archive
-        archive_summary_dict = summarize_archive_files( archive_path_IN, print_logging_IN )
+        archive_summary_dict = self.summarize_archive_files( archive_path_IN, print_logging_IN )
         
         # pull out type-to-count map
         object_type_to_count_map_OUT = archive_summary_dict.get( self.ARCHIVE_SUMMARY_TYPE_TO_COUNT_MAP, None )
@@ -501,6 +794,17 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         folder_object_type_value = None
         folder_object_type_count = None
         
+        # declare variables - update database
+        paper_instance = None
+        object_type_instance = None
+        paper_type_qs = None
+        paper_type_count = None
+        paper_type_instance = None
+        
+        # declare variables - auditing
+        start_dt = None
+        end_dt = None
+        duration = None
         
         # first, get paper path from instance.
         uncompressed_paper_path = self.destination_paper_path
@@ -508,6 +812,7 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         
             # init
             object_type_to_count_map = {}
+            start_dt = datetime.datetime.now()
             
             # first, get the list of folders for the current paper.
             xml_folder_list = glob.glob( "{}/*".format( uncompressed_paper_path ) )
@@ -565,13 +870,44 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         log_message = "\nObjectType values and occurrence counts:"
         self.output_debug_message( log_message, do_print_IN = True )
 
+        # loop over object type to count map
         for object_type, object_type_count in six.iteritems( object_type_to_count_map ):
-            
+        
             # print type and count
             log_message = "- {}: {}".format( object_type, object_type_count )
             self.output_debug_message( log_message, do_print_IN = True )
         
-        #-- END loop over object types. --#
+            # look up object type instance
+            paper_instance = self.get_PHNP_newspaper()
+            object_type_instance = self.fetch_object_type_instance( object_type )
+        
+            # see if already tied to paper
+            paper_type_qs = paper_instance.phnp_newspaper_object_type_set.all()
+            paper_type_qs = paper_type_qs.filter( proquest_hnp_object_type = object_type_instance )
+            paper_type_count = paper_type_qs.count()
+            if ( paper_type_count == 0 ):
+            
+                # not created yet.  Create it now.
+                paper_type_instance = PHNP_Newspaper_Object_Type()
+                paper_type_instance.proquest_hnp_newspaper = paper_instance
+                paper_type_instance.proquest_hnp_object_type = object_type_instance
+                paper_type_instance.item_count = object_type_count
+                paper_type_instance.save()
+                
+            else:
+            
+                # ! TODO - should I update count?  Probably not.
+                pass
+                
+            #-- END check to see if associated. --#
+            
+        #-- END loop over object types --#
+        
+        # timing
+        end_dt = datetime.datetime.now()
+        duration = end_dt - start_dt
+        log_message = "Processing complete @ {} ( started at {}; duration: {} )\n".format( end_dt, start_dt, duration )
+        self.output_debug_message( log_message, do_print_IN = True )
 
         object_type_to_count_map_OUT = object_type_to_count_map
         return object_type_to_count_map_OUT
@@ -588,6 +924,8 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         me = "summarize_archive_files"
         log_message = None
         uncompressed_archive_path = None
+        archive_path_item_list = None
+        archive_identifier = None
         xml_file_list = None
         xml_file_count = None
         xml_file_path = None
@@ -602,12 +940,16 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         object_type_node = None
         object_type_list = None
         object_type = None
+        numeric_pub_date_list = None
         numeric_pub_date = None
         numeric_pub_date_int = None
         
         # declare variables - summary information
+        min_pub_date_int = None
         min_pub_date = None
+        max_pub_date_int = None
         max_pub_date = None
+        archive_instance = None
                 
         # declare variables - auditing
         xml_file_counter = None
@@ -615,8 +957,19 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         no_object_type_counter = None
         no_object_type_text_counter = None
         
+        # declare variables - update database
+        object_type_instance = None
+        compressed_paper_path = None
+        compressed_file_path = None
+        archive_instance = None
+        archive_type_qs = None
+        archive_type_count = None
+        archive_type_instance = None
+        
         # get uncompressed archive path
         uncompressed_archive_path = archive_path_IN
+        archive_path_item_list = uncompressed_archive_path.split( "/" )
+        archive_identifier = archive_path_item_list[ -1 ]
         if ( ( uncompressed_archive_path is not None ) and ( uncompressed_archive_path != "" ) ):
         
             # init
@@ -639,8 +992,8 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
             no_record_counter = 0
             no_object_type_counter = 0
             no_object_type_text_counter = 0
-            min_pub_date = None
-            max_pub_date = None
+            min_pub_date_int = None
+            max_pub_date_int = None
             for xml_file_path in xml_file_list:
                 
                 xml_file_counter += 1
@@ -698,22 +1051,23 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
                         #-- END check for type value --#
                         
                         # get NumericPubDate
-                        numeric_pub_date = record_node.get( "NumericPubDate", None )
+                        numeric_pub_date_list = record_node.get( "NumericPubDate", None )
+                        numeric_pub_date = "".join( numeric_pub_date_list )
                         numeric_pub_date_int = int( numeric_pub_date )
                         
                         # is it largest...
-                        if ( ( max_pub_date is None ) or ( numeric_pub_date_int > max_pub_date ) ):
+                        if ( ( max_pub_date_int is None ) or ( numeric_pub_date_int > max_pub_date_int ) ):
                         
                             # either max is empty, or largest thus far.
-                            max_pub_date = numeric_pub_date_int
+                            max_pub_date_int = numeric_pub_date_int
                             
                         #-- END check to see if max --#                            
 
                         # ...or smallest?
-                        if ( ( min_pub_date is None ) or ( numeric_pub_date_int < min_pub_date ) ):
+                        if ( ( min_pub_date_int is None ) or ( numeric_pub_date_int < min_pub_date_int ) ):
                         
                             # either min is empty, or smallest thus far.
-                            min_pub_date = numeric_pub_date_int
+                            min_pub_date_int = numeric_pub_date_int
                             
                         #-- END check to see if min --#                                                
 
@@ -757,9 +1111,68 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         
         # store information in summary
         summary_dict_OUT[ self.ARCHIVE_SUMMARY_TYPE_TO_COUNT_MAP ] = object_type_to_count_map
-        summary_dict_OUT[ self.ARCHIVE_SUMMARY_MIN_PUB_DATE ] = min_pub_date
-        summary_dict_OUT[ self.ARCHIVE_SUMMARY_MAX_PUB_DATE ] = max_pub_date
+        summary_dict_OUT[ self.ARCHIVE_SUMMARY_MIN_PUB_DATE ] = min_pub_date_int
+        summary_dict_OUT[ self.ARCHIVE_SUMMARY_MAX_PUB_DATE ] = max_pub_date_int
         summary_dict_OUT[ self.ARCHIVE_SUMMARY_INSTANCE ] = None
+        
+        # get archive instance
+        min_pub_date = str( min_pub_date_int )
+        min_pub_date = datetime.datetime.strptime( min_pub_date, self.DATETIME_FORMAT_NUMERAL_PUB_DATE )
+        max_pub_date = str( max_pub_date_int )
+        max_pub_date = datetime.datetime.strptime( max_pub_date, self.DATETIME_FORMAT_NUMERAL_PUB_DATE )
+
+        compressed_paper_path = self.source_paper_path
+        if ( ( compressed_paper_path is not None ) and ( compressed_paper_path != "" ) ):
+        
+            compressed_file_path = "{}/{}.zip".format( compressed_paper_path, archive_identifier )
+            
+        else:
+        
+            compressed_file_path = None
+        
+        #-- END check to see if we have compressed paper path --#
+        
+        archive_instance = self.get_archive_instance( archive_identifier,
+                                                      compressed_file_path_IN = compressed_file_path,
+                                                      uncompressed_folder_path_IN = uncompressed_archive_path,
+                                                      start_date_IN = min_pub_date,
+                                                      end_date_IN = max_pub_date)
+
+        # update it
+        archive_instance.start_date = min_pub_date
+        archive_instance.end_date = max_pub_date
+        archive_instance.save()
+        
+        # loop over object type to count map
+        for object_type, object_type_count in six.iteritems( object_type_to_count_map ):
+        
+            # look up object type instance
+            object_type_instance = self.fetch_object_type_instance( object_type )
+        
+            # see if already tied to archive
+            archive_type_qs = archive_instance.phnp_newspaper_archive_object_type_set.all()
+            archive_type_qs = archive_type_qs.filter( proquest_hnp_object_type = object_type_instance )
+            archive_type_count = archive_type_qs.count()
+            if ( archive_type_count == 0 ):
+            
+                # not created yet.  Create it now.
+                archive_type_instance = PHNP_Newspaper_Archive_Object_Type()
+                archive_type_instance.proquest_hnp_newspaper_archive = archive_instance
+                archive_type_instance.proquest_hnp_object_type = object_type_instance
+                archive_type_instance.item_count = object_type_count
+                archive_type_instance.save()
+                
+            else:
+            
+                # ! TODO - should I update count?  Probably not.
+                pass
+                
+            #-- END check to see if associated. --#
+            
+        #-- END loop over object types --#
+        
+        # add to dict
+        summary_dict_OUT[ self.ARCHIVE_SUMMARY_INSTANCE ] = archive_instance        
 
         return summary_dict_OUT
                 
@@ -911,5 +1324,6 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         #-- END check to see if we have a source paper folder path --#
 
     #-- END method uncompress_paper_zip_files() --#
+
 
 #-- END class ProquestHNPNewspaperHelper --#
