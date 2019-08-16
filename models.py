@@ -270,6 +270,7 @@ class Proquest_HNP_Newspaper( models.Model ):
     end_year = models.IntegerField()
     compressed_folder_path = models.TextField( blank = True, null = True )
     uncompressed_folder_path = models.TextField( blank = True, null = True )
+    archive_file_name_prefix = models.CharField( max_length = 255, blank = True, null = True  )
     newspaper = models.ForeignKey( Newspaper, on_delete = models.SET_NULL, blank = True, null = True )
     notes = models.TextField( blank = True, null = True )
 
@@ -424,6 +425,13 @@ class PHNP_Newspaper_Object_Type( models.Model ):
         if ( self.proquest_hnp_object_type ):
         
             string_OUT += "{}{}".format( prefix_string, self.proquest_hnp_object_type )
+            prefix_string = " - "
+            
+        #-- END check to see if object type. --#
+            
+        if ( self.item_count ):
+        
+            string_OUT += "{}{}".format( prefix_string, self.item_count )
             prefix_string = " - "
             
         #-- END check to see if object type. --#
