@@ -244,7 +244,7 @@ class PHNP_Newspaper_Archive_Object_TypeAdmin( admin.ModelAdmin ):
         (
             None,
             { 
-                'fields' : [ 'id', 'proquest_hnp_newspaper_archive', 'proquest_hnp_object_type', 'item_count' ]
+                'fields' : [ 'proquest_hnp_newspaper_archive', 'proquest_hnp_object_type', 'item_count' ]
             }
         ),
     ]
