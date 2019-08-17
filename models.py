@@ -167,7 +167,7 @@ class Proquest_HNP_Object_Type( Abstract_Type ):
     #----------------------------------------------------------------------
 
 
-    #slug = models.SlugField( unique = True )
+    slug = models.SlugField()
     #name = models.CharField( max_length = 255, blank = True, null = True )
     #related_model = models.CharField( max_length = 255, blank = True, null = True )
     #description = models.TextField( blank = True )
@@ -243,22 +243,140 @@ class Proquest_HNP_Object_Type( Abstract_Type ):
         value_OUT = None
         
         # declare variables
+        me = "set_raw_value"
+        my_id = None
+        my_slug = None
+        my_raw_value = None
         cleaned_value = None
+        raw_value_qs = None
+        raw_value_count = None
+        raw_value_instance = None
         
-        # first, store raw value as-is
-        self.raw_value = value_IN
+        # init
+        my_id = self.id
+        my_slug = self.slug
+        my_raw_value = self.raw_value
         
-        # then, clean raw value for slugging.
-        cleaned_value = value_IN.strip()
-        cleaned_value = slugify( cleaned_value )
+        # got a value?
+        if ( ( value_IN is None ) or ( value_IN == "" ) ):
         
-        # store slug.
-        self.slug = cleaned_value
+            value_OUT = value_IN
+            
+            # got a slug already?
+            if ( ( my_slug is None ) or ( my_slug == "" ) ):
+            
+                # no slug - clean raw value for slugging.
+                cleaned_value = value_IN.strip()
+                cleaned_value = slugify( cleaned_value )
         
+                # store slug.
+                self.slug = cleaned_value
+                
+            #-- END check to see if slug --#
+            
+            # got an initial raw value already?
+            if ( ( my_raw_value is None ) or ( my_raw_value == "" ) ):
+            
+                # no raw value, use this one.
+                self.raw_value = value_IN
+                
+            #-- END check to see if slug --#
+            
+            # is this already in the database?
+            if ( ( my_id is not None ) and ( my_id > 0 ) ):
+            
+                # already in database.  See if raw value is in overflow table
+                #     set.  If not, add it using the model
+                #     Proquest_HNP_Object_Type_Raw_Value.
+                raw_value_qs = self.raw_value_set.all()
+                raw_value_qs = raw_value_qs.filter( raw_value = value_IN )
+                raw_value_count = raw_value_qs.count()
+                if ( raw_value_count == 0 ):
+                
+                    # not a known synonym.  Add it.
+                    raw_value_instance = Proquest_HNP_Object_Type_Raw_Value()
+                    raw_value_instance.proquest_hnp_object_type = self
+                    raw_value_instance.raw_value = value_IN
+                    raw_value_instance.save()
+                    
+                else:
+                
+                    # known synonym, already in the database.  Move on.
+                    pass
+                    
+                #-- END check to see if raw value already stored. --#                
+            
+            #-- END check to see if ID present --#    
+            
+        else:
+        
+            # nothing passed in, nothing to do.
+            print( "IN {}: nothing passed in, nothing to do.".format( me ) )
+            value_OUT = None
+
+        #-- END check to see if value passed in. --#            
+
+        return value_OUT
+
     #-- END method set_raw_value() --#
 
-
 #-- END model Proquest_HNP_Object_Type --#
+
+
+# Proquest_HNP_Object_Type_Raw_Value model
+@python_2_unicode_compatible
+class Proquest_HNP_Object_Type_Raw_Value( models.Model ):
+
+    #----------------------------------------------------------------------
+    # model fields and meta
+    #----------------------------------------------------------------------
+
+
+    proquest_hnp_object_type = models.ForeignKey( Proquest_HNP_Object_Type, on_delete = models.CASCADE, related_name = "raw_value_set" )
+    raw_value = models.TextField()
+
+
+    #----------------------------------------------------------------------
+    # methods
+    #----------------------------------------------------------------------
+
+
+    def __str__( self ):
+        
+        # return reference
+        string_OUT = ""
+        
+        # declare variables
+        prefix_string = ""
+        
+        if ( self.id ):
+        
+            # yes. output.
+            string_OUT += str( self.id )
+            prefix_string = " - "
+
+        #-- END check to see if ID --#
+
+        if ( self.proquest_hnp_object_type ):
+        
+            string_OUT += "{}{}".format( prefix_string, self.proquest_hnp_object_type )
+            prefix_string = " - "
+            
+        #-- END check to see if object type. --#
+            
+        if ( self.raw_value ):
+        
+            string_OUT += "{}{}".format( prefix_string, self.raw_value )
+            prefix_string = " - "
+            
+        #-- END check to see if object type. --#
+            
+        return string_OUT
+        
+    #-- END method __str__() --#
+
+
+#= End Proquest_HNP_Object_Type_Raw_Value Model ======================================================
 
 
 # Proquest_HNP_Newspaper model

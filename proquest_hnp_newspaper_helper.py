@@ -29,6 +29,7 @@ import zipfile
 # django classes
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.template.defaultfilters import slugify
 
 # python_utilities
 from python_utilities.exceptions.exception_helper import ExceptionHelper
@@ -44,6 +45,7 @@ from context_text_proquest_hnp.models import PHNP_Newspaper_Object_Type
 from context_text_proquest_hnp.models import Proquest_HNP_Newspaper
 from context_text_proquest_hnp.models import Proquest_HNP_Newspaper_Archive
 from context_text_proquest_hnp.models import Proquest_HNP_Object_Type
+from context_text_proquest_hnp.models import Proquest_HNP_Object_Type_Raw_Value
 
 #===============================================================================
 # classes (in alphabetical order by name)
@@ -96,11 +98,19 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
 
         # declare variables
         me = "fetch_object_type_instance"
+        slug_value = None
         log_message = None
         type_instance = None
+        db_raw_value = None
+        raw_value_qs = None
+        raw_value_count = None
+        raw_value_instance = None
         
         # make sure value is passed in.
         if ( ( raw_value_IN is not None ) and ( raw_value_IN != "" ) ):
+        
+            # slugify the value
+            slug_value = slugify( raw_value_IN )
         
             # is value already in our map?
             if ( raw_value_IN in cls.raw_object_type_to_instance_map ):
@@ -113,8 +123,17 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
                 # not in cache.  In database?
                 try:
                 
-                    # look to see if type with this raw value exists.
+                    # look to see if type with this slug exists.
                     type_instance = Proquest_HNP_Object_Type.objects.get( raw_value = raw_value_IN )
+                    
+                    # call method set_raw_value() with the value passed in to
+                    #     set the current raw value - if matches main value in
+                    #     the object type record, does nothing except to make
+                    #     sure the value is also in the overflow area.  If the
+                    #     value passed in is different from main record, adds it
+                    #     to the overflow table.
+                    type_instance.set_raw_value( raw_value_IN )
+                    type_instance.save()
                     
                 except Proquest_HNP_Object_Type.DoesNotExist as dnee:
                 
@@ -127,7 +146,7 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
                 
                     # ERROR - more than one.  Should be impossible.  Check
                     #     case-sensitivity things.
-                    log_message = "ERROR - multiple matches for raw value \"{}\".  This should be impossible.  Check for case-insensitivity."
+                    log_message = "ERROR - multiple matches for raw value \"{}\" ( slug \"{}\" ).".format( slug_value, raw_value_IN )
                     cls.log_message( log_message,
                                      method_IN = me,
                                      logger_name_IN = cls.MY_LOGGER_NAME,
@@ -137,7 +156,7 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
                 except Exception as e:
                 
                     # Unexpected ERROR.
-                    log_message = "ERROR - multiple matches for raw value \"{}\".  This should be impossible.  Check for case-insensitivity."
+                    log_message = "ERROR - Unexpected exception caught trying to retrieve object type instance for raw value \"{}\" ( slug \"\" ).".format( slug_value, raw_value_IN )
                     cls.log_exception( e,
                                        message_IN = log_message,
                                        method_IN = me,

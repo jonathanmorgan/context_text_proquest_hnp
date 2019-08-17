@@ -2,6 +2,7 @@ from django.contrib import admin
 
 # Import models
 from context_text_proquest_hnp.models import Proquest_HNP_Object_Type
+from context_text_proquest_hnp.models import Proquest_HNP_Object_Type_Raw_Value
 from context_text_proquest_hnp.models import Proquest_HNP_Newspaper
 from context_text_proquest_hnp.models import Proquest_HNP_Newspaper_Archive
 from context_text_proquest_hnp.models import PHNP_Newspaper_Object_Type
@@ -9,6 +10,7 @@ from context_text_proquest_hnp.models import PHNP_Newspaper_Archive_Object_Type
 
 # default admins
 #admin.site.register( Proquest_HNP_Object_Type )
+#admin.site.register( Proquest_HNP_Object_Type_Raw_Value )
 #admin.site.register( Proquest_HNP_Newspaper )
 #admin.site.register( Proquest_HNP_Newspaper_Archive )
 #admin.site.register( PHNP_Newspaper_Object_Type )
@@ -46,6 +48,39 @@ class Proquest_HNP_Object_TypeAdmin( admin.ModelAdmin ):
 #-- END Proquest_HNP_Object_TypeAdmin admin model --#
 
 admin.site.register( Proquest_HNP_Object_Type, Proquest_HNP_Object_TypeAdmin )
+
+
+#-------------------------------------------------------------------------------
+# ! ==> Proquest_HNP_Object_Type Admin definition
+#-------------------------------------------------------------------------------
+
+
+class Proquest_HNP_Object_Type_Raw_ValueAdmin( admin.ModelAdmin ):
+
+    autocomplete_fields = [ 'proquest_hnp_object_type' ]
+    
+    fieldsets = [
+        (
+            None,
+            { 
+                'fields' : [ 'proquest_hnp_object_type', 'raw_value' ]
+            }
+        ),
+    ]
+
+    #inlines = [
+    #    Source_OrganizationInline,
+    #]
+
+    list_display = ( 'id', 'proquest_hnp_object_type', 'raw_value' )
+    #list_display_links = ( 'headline', )
+    #list_filter = [ 'location' ]
+    search_fields = [ 'raw_value', 'id' ]
+    #date_hierarchy = 'pub_date'
+
+#-- END Proquest_HNP_Object_Type_Raw_Value admin model --#
+
+admin.site.register( Proquest_HNP_Object_Type_Raw_Value, Proquest_HNP_Object_Type_Raw_ValueAdmin )
 
 
 #-------------------------------------------------------------------------------
@@ -112,7 +147,7 @@ class Proquest_HNP_Newspaper_ArchiveAdmin( admin.ModelAdmin ):
         PHNPNA_PHNP_Newspaper_Archive_Object_TypeInline,
     ]
 
-    list_display = ( 'id', 'proquest_hnp_newspaper', 'archive_identifier', 'start_year', 'end_year' )
+    list_display = ( 'id', 'proquest_hnp_newspaper', 'archive_identifier', 'start_date', 'end_date' )
     list_display_links = ( 'id', 'archive_identifier' )
     #list_filter = [ 'location' ]
     search_fields = [ 'archive_identifier', 'start_date', 'end_date', 'compressed_file_path', 'uncompressed_folder_path', 'id' ]
@@ -232,7 +267,7 @@ admin.site.register( PHNP_Newspaper_Object_Type, PHNP_Newspaper_Object_TypeAdmin
 
 
 #-------------------------------------------------------------------------------
-# ! ==> PHNProquest_HNP_Object_Type Admin definition
+# ! ==> PHNP_Newspaper_Archive_Object_Type Admin definition
 #-------------------------------------------------------------------------------
 
 
