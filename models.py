@@ -258,7 +258,7 @@ class Proquest_HNP_Object_Type( Abstract_Type ):
         my_raw_value = self.raw_value
         
         # got a value?
-        if ( ( value_IN is None ) or ( value_IN == "" ) ):
+        if ( ( value_IN is not None ) and ( value_IN != "" ) ):
         
             value_OUT = value_IN
             
