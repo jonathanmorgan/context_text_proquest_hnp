@@ -91,6 +91,28 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
 
 
     @classmethod
+    def get_all_object_types( cls ):
+        
+        # return reference
+        list_OUT = None
+        
+        # declare variables
+        object_type_qs = None
+        
+        # get all in QS.
+        object_type_qs = Proquest_HNP_Object_Type.objects.all()
+        object_type_qs = object_type_qs.order_by( "raw_value" )
+        
+        # get list of raw values
+        object_type_qs = object_type_qs.values_list( "raw_value", flat = True )
+        list_OUT = list( object_type_qs )
+        
+        return list_OUT
+        
+    #-- END class method get_all_object_types() --#
+    
+
+    @classmethod
     def fetch_object_type_instance( cls, raw_value_IN ):
         
         # return reference
@@ -631,7 +653,9 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
         
         # output
         object_type_to_file_path_map = {}
+        object_type_list = None
         file_path_list = None
+        file_path_list_count = None
         file_path_example_list = None
         
         # get uncompressed archive path
@@ -737,11 +761,17 @@ class ProquestHNPNewspaperHelper( ContextTextBase ):
             log_message += "\n- No ObjectType: {}".format( no_object_type_counter )
             log_message += "\n- No ObjectType value: {}".format( no_object_type_text_counter )
             log_message += "\n\nObjectType values and occurrence counts:"
-            for object_type, file_path_list in six.iteritems( object_type_to_file_path_map ):
+            object_type_list = list( six.iterkeys( object_type_to_file_path_map ) )
+            object_type_list.sort()
+            for object_type in object_type_list:
+                
+                # get file path list
+                file_path_list = object_type_to_file_path_map.get( object_type, [] )
                 
                 # print type and count
+                file_path_list_count = len( file_path_list )
                 file_path_example_list = file_path_list[ : 10 ]
-                log_message += "\n- {}:".format( object_type )
+                log_message += "\n- {} - {} files:".format( object_type, file_path_list_count )
                 for file_path in file_path_example_list:
                     
                     log_message += "\n    - {}".format( file_path )

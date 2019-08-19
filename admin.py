@@ -30,7 +30,7 @@ class Proquest_HNP_Object_TypeAdmin( admin.ModelAdmin ):
         (
             None,
             { 
-                'fields' : [ 'slug', 'name', 'raw_value', 'parent_type', 'description', 'related_model' ]
+                'fields' : [ 'raw_value', 'slug', 'name', 'parent_type', 'description', 'related_model' ]
             }
         ),
     ]
@@ -39,11 +39,12 @@ class Proquest_HNP_Object_TypeAdmin( admin.ModelAdmin ):
     #    Source_OrganizationInline,
     #]
 
-    list_display = ( 'id', 'slug', 'name', 'raw_value' )
+    list_display = ( 'id', 'raw_value', 'slug', 'name', 'last_modified' )
     #list_display_links = ( 'headline', )
     #list_filter = [ 'location' ]
     search_fields = [ 'slug', 'name', 'raw_value', 'description', 'id' ]
     #date_hierarchy = 'pub_date'
+    ordering = [ "-last_modified" ]
 
 #-- END Proquest_HNP_Object_TypeAdmin admin model --#
 
@@ -120,6 +121,8 @@ class PHNPNA_PHNP_Newspaper_Archive_Object_TypeInline( admin.TabularInline ):
         #),
     ]
 
+    ordering = [ 'proquest_hnp_object_type__raw_value' ]
+
 #-- END class PHNPN_PHNP_Newspaper_Object_TypeInline --#
 
 
@@ -149,7 +152,7 @@ class Proquest_HNP_Newspaper_ArchiveAdmin( admin.ModelAdmin ):
 
     list_display = ( 'id', 'proquest_hnp_newspaper', 'archive_identifier', 'start_date', 'end_date' )
     list_display_links = ( 'id', 'archive_identifier' )
-    #list_filter = [ 'location' ]
+    list_filter = [ 'proquest_hnp_newspaper' ]
     search_fields = [ 'archive_identifier', 'start_date', 'end_date', 'compressed_file_path', 'uncompressed_folder_path', 'id' ]
     #date_hierarchy = 'pub_date'
 
@@ -290,7 +293,7 @@ class PHNP_Newspaper_Archive_Object_TypeAdmin( admin.ModelAdmin ):
 
     list_display = ( 'id', 'proquest_hnp_newspaper_archive', 'proquest_hnp_object_type', 'item_count' )
     #list_display_links = ( 'headline', )
-    #list_filter = [ 'location' ]
+    list_filter = [ 'proquest_hnp_newspaper_archive__proquest_hnp_newspaper', 'proquest_hnp_object_type' ]
     search_fields = [ 'item_count', 'id' ]
     #date_hierarchy = 'pub_date'
 

@@ -183,7 +183,7 @@ class Proquest_HNP_Object_Type( Abstract_Type ):
     # Meta-data for this class.
     class Meta:
 
-        ordering = [ 'last_modified' ]
+        ordering = [ 'raw_value' ]
         
     #-- END class Meta --#
 
