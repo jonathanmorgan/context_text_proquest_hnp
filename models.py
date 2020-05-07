@@ -26,8 +26,8 @@ from django.utils.encoding import python_2_unicode_compatible
 from taggit.managers import TaggableManager
 
 # context imports
+from context.models import Abstract_Context_With_JSON
 from context.models import Abstract_Type
-from context.shared.models import Abstract_Context_With_JSON
 
 # context_text imports
 from context_text.models import Newspaper
