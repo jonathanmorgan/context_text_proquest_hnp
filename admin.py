@@ -92,13 +92,7 @@ admin.site.register( Proquest_HNP_Object_Type_Raw_Value, Proquest_HNP_Object_Typ
 # type inline
 class PHNPNA_PHNP_Newspaper_Archive_Object_TypeInline( admin.TabularInline ):
 
-    # set up ajax-selects - for make_ajax_form, 1st argument is the model you
-    #    are looking to make ajax selects form fields for; 2nd argument is a
-    #    dict of pairs of field names in the model in argument 1 (with no quotes
-    #    around them) mapped to lookup channels used to service them (lookup
-    #    channels are defined in settings.py, implenented in a separate module -
-    #    in this case, implemented in context.lookups.py
-    #form = make_ajax_form( Entity_Relation_Type_Trait, dict( trait_type = 'trait_type' ) )
+    # ajax-based autocomplete
     autocomplete_fields = [ 'proquest_hnp_object_type' ]
     
     model = PHNP_Newspaper_Archive_Object_Type
@@ -169,13 +163,7 @@ admin.site.register( Proquest_HNP_Newspaper_Archive, Proquest_HNP_Newspaper_Arch
 # type inline
 class PHNPN_PHNP_Newspaper_Object_TypeInline( admin.TabularInline ):
 
-    # set up ajax-selects - for make_ajax_form, 1st argument is the model you
-    #    are looking to make ajax selects form fields for; 2nd argument is a
-    #    dict of pairs of field names in the model in argument 1 (with no quotes
-    #    around them) mapped to lookup channels used to service them (lookup
-    #    channels are defined in settings.py, implenented in a separate module -
-    #    in this case, implemented in context.lookups.py
-    #form = make_ajax_form( Entity_Relation_Type_Trait, dict( trait_type = 'trait_type' ) )
+    # ajax-based autocomplete
     autocomplete_fields = [ 'proquest_hnp_object_type' ]
     
     model = PHNP_Newspaper_Object_Type
